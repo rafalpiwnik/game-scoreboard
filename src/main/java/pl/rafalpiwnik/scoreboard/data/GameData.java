@@ -2,12 +2,14 @@ package pl.rafalpiwnik.scoreboard.data;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Getter
+@Setter
 @ToString
 @EqualsAndHashCode(of = {"id"})
 public class GameData {
@@ -24,5 +26,10 @@ public class GameData {
         this.homeTeam = homeTeam;
         this.awayTeam = awayTeam;
         this.startTime = startTime;
+    }
+
+    public void updateScores(int homeScore, int awayScore) {
+        this.homeScore = homeScore;
+        this.awayScore = awayScore;
     }
 }
