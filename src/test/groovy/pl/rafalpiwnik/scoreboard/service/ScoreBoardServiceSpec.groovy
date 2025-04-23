@@ -1,5 +1,6 @@
 package pl.rafalpiwnik.scoreboard.service
 
+import pl.rafalpiwnik.scoreboard.model.Game
 import pl.rafalpiwnik.scoreboard.repository.GameRepository
 import pl.rafalpiwnik.scoreboard.repository.InMemoryGameRepository
 import spock.lang.Shared
@@ -8,6 +9,8 @@ import spock.lang.Subject
 
 import java.time.Clock
 import java.time.Instant
+
+import static java.time.Instant.now
 
 class ScoreBoardServiceSpec extends Specification {
 
@@ -19,18 +22,18 @@ class ScoreBoardServiceSpec extends Specification {
     @Subject
     ScoreBoard scoreboard = new ScoreBoardService(gameRepository, clock)
 
-    private final static Instant TEST_INSTANT = Instant.now()
+    private final static Instant TEST_INSTANT = now()
 
     def setupSpec() {
         clock.instant() >> TEST_INSTANT
     }
 
     def "should start game"() {
-        given: "a game with home and away teams"
+        given:
         def homeTeam = "Mexico"
         def awayTeam = "Canada"
 
-        when: "the game is started"
+        when:
         def gameId = scoreboard.startGame(homeTeam, awayTeam)
 
         then:
@@ -40,32 +43,130 @@ class ScoreBoardServiceSpec extends Specification {
             id == gameId
             homeTeam == homeTeam
             awayTeam == awayTeam
+            homeScore == 0
+            awayScore == 0
             startTime == TEST_INSTANT
         }
     }
 
-    def "should finish game"() {
-        given: "a game with home and away teams"
+    def "should update score for a game"() {
+        given:
         def gameId = scoreboard.startGame("Mexico", "Canada")
 
-        when: "the game is finished"
-        scoreboard.finishGame(gameId)
+        expect:
+        verifyAll(gameRepository.findById(gameId).get()) {
+            homeScore == 0
+            awayScore == 0
+        }
+
+        when:
+        scoreboard.updateScore(gameId, 2, 3)
 
         then:
         def retrievedGame = gameRepository.findById(gameId)
         retrievedGame.isPresent()
         verifyAll(retrievedGame.get()) {
-            id == gameId
-            end
+            homeScore == 2
+            awayScore == 3
         }
     }
 
-    def "FinishGame"() {
+    def "should throw exception when attempting to update game with illegal score"() {
+        given:
+        def gameId = scoreboard.startGame("Mexico", "Canada")
+
+        when:
+        scoreboard.updateScore(gameId, homeScore, awayScore)
+
+        then:
+        def ex = thrown(IllegalArgumentException)   // todo choice of exception
+
+        where:
+        homeScore | awayScore
+        -1        | 3
+        2         | -3
     }
 
-    def "UpdateScore"() {
+    def "should throw exception when updating score for nonexistent game"() {
+        given:
+        def gameId = UUID.randomUUID()
+
+        when:
+        scoreboard.updateScore(gameId, 2, 3)
+
+        then:
+        def ex = thrown(IllegalArgumentException)
     }
 
-    def "GetSummary"() {
+    def "should finish game"() {
+        given:
+        def gameId = scoreboard.startGame("Mexico", "Canada")
+
+        when:
+        scoreboard.finishGame(gameId)
+
+        then:
+        def retrievedGame = gameRepository.findById(gameId)
+        retrievedGame.isEmpty()
     }
+
+    def "should throw exception when attempting to finish nonexistent game"() {
+        given:
+        def gameId = UUID.randomUUID()
+
+        when:
+        scoreboard.finishGame(gameId)
+
+        then:
+        def ex = thrown(IllegalArgumentException)
+    }
+
+    def "should return games list ordered by total score"() {
+        given:
+        def game1 = scoreboard.startGame("Mexico", "Canada")
+        def game2 = scoreboard.startGame("Brazil", "Argentina")
+        def game3 = scoreboard.startGame("Spain", "France")
+
+        scoreboard.updateScore(game1, 1, 2)     // total 3
+        scoreboard.updateScore(game2, 3, 1)     // total 4
+        scoreboard.updateScore(game3, 5, 6)     // total 11
+
+        when:
+        def games = scoreboard.getSummary()
+
+        then:
+        games.size() == 3
+        games == [
+                new Game("Spain", "France", 5, 6),
+                new Game("Brazil", "Argentina", 3, 1),
+                new Game("Mexico", "Canada", 1, 2)
+        ]
+    }
+
+    def "should return games ordered by start time if total scores are equal"() {
+        given:
+        def referenceTime = now()
+        clock.instant() >> [referenceTime, referenceTime.plusSeconds(2), referenceTime.plusSeconds(4)]
+        // todo verify this
+
+        def game1 = scoreboard.startGame("Mexico", "Canada")
+        def game2 = scoreboard.startGame("Brazil", "Argentina")
+        def game3 = scoreboard.startGame("Spain", "France")
+
+        scoreboard.updateScore(game1, 1, 2)     // total 3
+        scoreboard.updateScore(game2, 3, 0)     // total 3
+        scoreboard.updateScore(game3, 5, 6)     // total 11
+
+        when:
+        def games = scoreboard.getSummary()
+
+        then:
+        games.size() == 3
+        games == [
+                new Game("Spain", "France", 5, 6),
+                new Game("Mexico", "Canada", 1, 2),
+                new Game("Brazil", "Argentina", 3, 0),
+        ]
+    }
+
 }
