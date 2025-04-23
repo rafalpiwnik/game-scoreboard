@@ -12,5 +12,7 @@ public interface GameRepository {
 
     Optional<GameData> findById(UUID id);
 
+    void deleteById(UUID id);
+
     Collection<GameData> findAll();
 }

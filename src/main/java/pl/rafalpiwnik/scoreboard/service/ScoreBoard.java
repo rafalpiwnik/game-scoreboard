@@ -1,4 +1,4 @@
-package pl.rafalpiwnik.scoreboard;
+package pl.rafalpiwnik.scoreboard.service;
 
 import pl.rafalpiwnik.scoreboard.model.Game;
 

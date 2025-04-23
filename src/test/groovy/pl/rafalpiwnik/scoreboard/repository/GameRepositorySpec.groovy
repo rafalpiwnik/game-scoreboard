@@ -54,15 +54,30 @@ class GameRepositorySpec extends Specification {
         }
     }
 
+    def "should delete game by id"() {
+        given:
+        def gameId = randomUUID()
+        gameRepository.save(new GameData(gameId, "mexico", "canada", now()))
+
+        expect:
+        gameRepository.findById(gameId).isPresent()
+
+        when:
+        gameRepository.deleteById(gameId)
+
+        then:
+        gameRepository.findById(gameId).isEmpty()
+    }
+
     def "findAll should return empty collection when no games are saved"() {
-        when: "findAll is called on an empty repository"
+        when:
         def allGames = gameRepository.findAll()
 
-        then: "The returned collection is empty"
+        then:
         allGames.isEmpty()
     }
 
-    def "findAll should return all games in correct order"() {
+    def "findAll should return all games"() {
         given:
         def referenceTime = now()
         def games = [
@@ -74,14 +89,11 @@ class GameRepositorySpec extends Specification {
             gameRepository.save(it)
         }
 
-        when: "findAll is called"
+        when:
         def allGames = gameRepository.findAll()
 
-        then: "The returned collection contains all games"
+        then:
         allGames.size() == games.size()
         allGames.containsAll(games)
-
     }
-
-
 }
