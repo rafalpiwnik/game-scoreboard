@@ -9,8 +9,6 @@ public record Game(String homeTeam, String awayTeam, int homeScore, int awayScor
     public Game {
         Objects.requireNonNull(homeTeam, "Home team cannot be null");
         Objects.requireNonNull(awayTeam, "Away team cannot be null");
-
-        // todo further validation
     }
 
     public static Game fromEntity(GameData gameData) {
