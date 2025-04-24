@@ -12,7 +12,7 @@ public interface GameRepository {
 
     Optional<GameData> findById(UUID id);
 
-    void deleteById(UUID id);
+    boolean deleteById(UUID id);
 
     Collection<GameData> findAll();
 }

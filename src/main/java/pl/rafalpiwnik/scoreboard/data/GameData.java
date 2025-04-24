@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Getter
@@ -22,14 +23,23 @@ public class GameData {
     private int awayScore;
 
     public GameData(UUID id, String homeTeam, String awayTeam, Instant startTime) {
+        Objects.requireNonNull(id);
+        Objects.requireNonNull(homeTeam);
+        Objects.requireNonNull(awayTeam);
+        Objects.requireNonNull(startTime);
+
         this.id = id;
         this.homeTeam = homeTeam;
         this.awayTeam = awayTeam;
         this.startTime = startTime;
     }
 
-    public void updateScores(int homeScore, int awayScore) {
+    public void setScores(int homeScore, int awayScore) {
         this.homeScore = homeScore;
         this.awayScore = awayScore;
+    }
+
+    public int getTotalScore() {
+        return homeScore + awayScore;
     }
 }

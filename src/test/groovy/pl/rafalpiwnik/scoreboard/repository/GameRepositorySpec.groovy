@@ -38,7 +38,7 @@ class GameRepositorySpec extends Specification {
         def game = new GameData(gameId, "mexico", "canada", now())
 
         when: "game score is changed and the game is saved"
-        game.updateScores(3, 5)
+        game.setScores(3, 5)
         gameRepository.save(game)
 
         then: "retrieved game has updated score"

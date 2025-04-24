@@ -24,8 +24,9 @@ public class InMemoryGameRepository implements GameRepository {
     }
 
     @Override
-    public void deleteById(UUID id) {
-        games.remove(id);
+    public boolean deleteById(UUID id) {
+        return Optional.ofNullable(games.remove(id))
+                .isPresent();
     }
 
     @Override

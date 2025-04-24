@@ -1,5 +1,7 @@
 package pl.rafalpiwnik.scoreboard.model;
 
+import pl.rafalpiwnik.scoreboard.data.GameData;
+
 import java.util.Objects;
 
 public record Game(String homeTeam, String awayTeam, int homeScore, int awayScore) {
@@ -11,8 +13,8 @@ public record Game(String homeTeam, String awayTeam, int homeScore, int awayScor
         // todo further validation
     }
 
-    public int getTotalScore() {
-        return homeScore + awayScore;
+    public static Game fromEntity(GameData gameData) {
+        return new Game(gameData.getHomeTeam(), gameData.getAwayTeam(), gameData.getHomeScore(), gameData.getAwayScore());
     }
 
     @Override

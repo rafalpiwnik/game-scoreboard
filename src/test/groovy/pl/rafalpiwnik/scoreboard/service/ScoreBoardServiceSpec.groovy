@@ -1,9 +1,9 @@
 package pl.rafalpiwnik.scoreboard.service
 
+import pl.rafalpiwnik.scoreboard.exception.ScoreBoardException
 import pl.rafalpiwnik.scoreboard.model.Game
 import pl.rafalpiwnik.scoreboard.repository.GameRepository
 import pl.rafalpiwnik.scoreboard.repository.InMemoryGameRepository
-import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Subject
 
@@ -14,9 +14,7 @@ import static java.time.Instant.now
 
 class ScoreBoardServiceSpec extends Specification {
 
-    @Shared
     Clock clock = Mock(Clock)
-
     GameRepository gameRepository = new InMemoryGameRepository()
 
     @Subject
@@ -24,12 +22,9 @@ class ScoreBoardServiceSpec extends Specification {
 
     private final static Instant TEST_INSTANT = now()
 
-    def setupSpec() {
-        clock.instant() >> TEST_INSTANT
-    }
-
     def "should start game"() {
         given:
+        clock.instant() >> TEST_INSTANT
         def homeTeam = "Mexico"
         def awayTeam = "Canada"
 
@@ -51,6 +46,7 @@ class ScoreBoardServiceSpec extends Specification {
 
     def "should update score for a game"() {
         given:
+        clock.instant() >> TEST_INSTANT
         def gameId = scoreboard.startGame("Mexico", "Canada")
 
         expect:
@@ -73,18 +69,20 @@ class ScoreBoardServiceSpec extends Specification {
 
     def "should throw exception when attempting to update game with illegal score"() {
         given:
+        clock.instant() >> TEST_INSTANT
         def gameId = scoreboard.startGame("Mexico", "Canada")
 
         when:
         scoreboard.updateScore(gameId, homeScore, awayScore)
 
         then:
-        def ex = thrown(IllegalArgumentException)   // todo choice of exception
+        def ex = thrown(IllegalArgumentException)
 
         where:
         homeScore | awayScore
         -1        | 3
         2         | -3
+        -5        | -1
     }
 
     def "should throw exception when updating score for nonexistent game"() {
@@ -95,11 +93,12 @@ class ScoreBoardServiceSpec extends Specification {
         scoreboard.updateScore(gameId, 2, 3)
 
         then:
-        def ex = thrown(IllegalArgumentException)
+        def ex = thrown(ScoreBoardException)
     }
 
     def "should finish game"() {
         given:
+        clock.instant() >> TEST_INSTANT
         def gameId = scoreboard.startGame("Mexico", "Canada")
 
         when:
@@ -118,11 +117,12 @@ class ScoreBoardServiceSpec extends Specification {
         scoreboard.finishGame(gameId)
 
         then:
-        def ex = thrown(IllegalArgumentException)
+        def ex = thrown(ScoreBoardException)
     }
 
     def "should return games list ordered by total score"() {
         given:
+        clock.instant() >> TEST_INSTANT
         def game1 = scoreboard.startGame("Mexico", "Canada")
         def game2 = scoreboard.startGame("Brazil", "Argentina")
         def game3 = scoreboard.startGame("Spain", "France")
@@ -143,19 +143,21 @@ class ScoreBoardServiceSpec extends Specification {
         ]
     }
 
-    def "should return games ordered by start time if total scores are equal"() {
+    def "should return games ordered by start time desc if total scores are equal"() {
         given:
-        def referenceTime = now()
-        clock.instant() >> [referenceTime, referenceTime.plusSeconds(2), referenceTime.plusSeconds(4)]
-        // todo verify this
+        clock.instant() >>> [
+                TEST_INSTANT,
+                TEST_INSTANT.plusSeconds(2),
+                TEST_INSTANT.plusSeconds(4)
+        ]
 
         def game1 = scoreboard.startGame("Mexico", "Canada")
         def game2 = scoreboard.startGame("Brazil", "Argentina")
         def game3 = scoreboard.startGame("Spain", "France")
 
-        scoreboard.updateScore(game1, 1, 2)     // total 3
-        scoreboard.updateScore(game2, 3, 0)     // total 3
-        scoreboard.updateScore(game3, 5, 6)     // total 11
+        scoreboard.updateScore(game1, 1, 2)     // total 3  @ T
+        scoreboard.updateScore(game2, 3, 0)     // total 3  @ T+2
+        scoreboard.updateScore(game3, 5, 6)     // total 11 @ T+4
 
         when:
         def games = scoreboard.getSummary()
@@ -163,9 +165,9 @@ class ScoreBoardServiceSpec extends Specification {
         then:
         games.size() == 3
         games == [
-                new Game("Spain", "France", 5, 6),
-                new Game("Mexico", "Canada", 1, 2),
-                new Game("Brazil", "Argentina", 3, 0),
+                new Game("Spain", "France", 5, 6),      // total 11 @ T+4
+                new Game("Brazil", "Argentina", 3, 0),  // total 3 @ T+2
+                new Game("Mexico", "Canada", 1, 2)      // total 3 @ T
         ]
     }
 
