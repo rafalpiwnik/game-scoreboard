@@ -120,7 +120,7 @@ class ScoreBoardServiceSpec extends Specification {
         def ex = thrown(ScoreBoardException)
     }
 
-    def "should return games list ordered by total score"() {
+    def "should return summary list ordered by total score"() {
         given:
         clock.instant() >> TEST_INSTANT
         def game1 = scoreboard.startGame("Mexico", "Canada")
@@ -132,18 +132,25 @@ class ScoreBoardServiceSpec extends Specification {
         scoreboard.updateScore(game3, 5, 6)     // total 11
 
         when:
-        def games = scoreboard.getSummary()
+        def summary = scoreboard.getSummary()
 
         then:
-        games.size() == 3
-        games == [
+        summary.size() == 3
+        summary == [
                 new Game("Spain", "France", 5, 6),
                 new Game("Brazil", "Argentina", 3, 1),
                 new Game("Mexico", "Canada", 1, 2)
         ]
+
+        and: "games are printed in correct format"
+        summary*.toString() == [
+                "Spain 5 - France 6",
+                "Brazil 3 - Argentina 1",
+                "Mexico 1 - Canada 2"
+        ]
     }
 
-    def "should return games ordered by start time desc if total scores are equal"() {
+    def "should return summary ordered by start time desc if total scores are equal"() {
         given:
         clock.instant() >>> [
                 TEST_INSTANT,
@@ -151,8 +158,8 @@ class ScoreBoardServiceSpec extends Specification {
                 TEST_INSTANT.plusSeconds(4)
         ]
 
-        def game1 = scoreboard.startGame("Mexico", "Canada")
-        def game2 = scoreboard.startGame("Brazil", "Argentina")
+        def game1 = scoreboard.startGame("Brazil", "Germany")
+        def game2 = scoreboard.startGame("Mexico", "Canada")
         def game3 = scoreboard.startGame("Spain", "France")
 
         scoreboard.updateScore(game1, 1, 2)     // total 3  @ T
@@ -160,15 +167,54 @@ class ScoreBoardServiceSpec extends Specification {
         scoreboard.updateScore(game3, 5, 6)     // total 11 @ T+4
 
         when:
-        def games = scoreboard.getSummary()
+        def summary = scoreboard.getSummary()
 
         then:
-        games.size() == 3
-        games == [
+        summary.size() == 3
+        summary == [
                 new Game("Spain", "France", 5, 6),      // total 11 @ T+4
-                new Game("Brazil", "Argentina", 3, 0),  // total 3 @ T+2
-                new Game("Mexico", "Canada", 1, 2)      // total 3 @ T
+                new Game("Mexico", "Canada", 3, 0),     // total 3 @ T+2
+                new Game("Brazil", "Germany", 1, 2)     // total 3 @ T
+        ]
+
+        and: "games are printed in correct format"
+        summary*.toString() == [
+                "Spain 5 - France 6",
+                "Mexico 3 - Canada 0",
+                "Brazil 1 - Germany 2"
         ]
     }
 
+    def "should return summary matching the exact example provided in requirements"() {
+        given: "games are started in specific order"
+        clock.instant() >>> (1..5).collect { i ->
+            TEST_INSTANT.plusSeconds(i)
+        }
+
+        def gameIdMexCan = scoreboard.startGame("Mexico", "Canada")
+        def gameIdSpaBra = scoreboard.startGame("Spain", "Brazil")
+        def gameIdGerFra = scoreboard.startGame("Germany", "France")
+        def gameIdUruIta = scoreboard.startGame("Uruguay", "Italy")
+        def gameIdArgAus = scoreboard.startGame("Argentina", "Australia")
+
+        and: "Scores are updated to match the example"
+        scoreboard.updateScore(gameIdMexCan, 0, 5)     // total 5
+        scoreboard.updateScore(gameIdSpaBra, 10, 2)    // total 12
+        scoreboard.updateScore(gameIdGerFra, 2, 2)     // total 4
+        scoreboard.updateScore(gameIdUruIta, 6, 6)     // total 12
+        scoreboard.updateScore(gameIdArgAus, 3, 1)     // total 4
+
+        when:
+        def summary = scoreboard.getSummary()
+
+        then:
+        summary.size() == 5
+        summary*.toString() == [
+                "Uruguay 6 - Italy 6",
+                "Spain 10 - Brazil 2",
+                "Mexico 0 - Canada 5",
+                "Argentina 3 - Australia 1",
+                "Germany 2 - France 2"
+        ]
+    }
 }
